@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Plant Disease Detector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .upload-box {
+            border: 2px dashed #ccc;
+            padding: 40px;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        #preview {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌱 Plant Disease Detector</h1>
+    <p>Upload an image of a plant leaf to detect diseases</p>
+    
+    <div class="upload-box" id="dropZone">
+        <p>Drag & drop an image here or click to select</p>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <button class="btn" onclick="document.getElementById('fileInput').click()">Select Image</button>
+    </div>
+    
+    <div id="result" style="display: none;">
+        <h2>Detection Result</h2>
+        <img id="preview" src="" alt="Prediction">
+        <p><strong>Disease:</strong> <span id="disease"></span></p>
+        <p><strong>Confidence:</strong> <span id="confidence"></span></p>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        
+        fileInput.addEventListener('change', handleFile);
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#4CAF50';
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = '#ccc';
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#ccc';
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile();
+            }
+        });
+        
+        function handleFile() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show loading state
+            document.getElementById('result').style.display = 'none';
+            dropZone.innerHTML = '<p>Processing... Please wait</p>';
+            
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    dropZone.innerHTML = '<p>Drag & drop an image here or click to select</p><button class="btn">Select Image</button>';
+                    return;
+                }
+                
+                // results
+                document.getElementById('preview').src = `data:image/png;base64,${data.image}`;
+                document.getElementById('disease').textContent = data.disease;
+                document.getElementById('confidence').textContent = data.confidence;
+                document.getElementById('result').style.display = 'block';
+                
+                dropZone.innerHTML = '<p>Drag & drop another image or click to select</p><button class="btn">Select Image</button>';
+                fileInput.value = '';
+                setupEventListeners();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during prediction');
+                dropZone.innerHTML = '<p>Drag & drop an image here or click to select</p><button class="btn">Select Image</button>';
+                setupEventListeners();
+            });
+        }
+        
+        function setupEventListeners() {
+            document.querySelector('.btn').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+        }
+    </script>
+</body>
+</html>
